@@ -11,7 +11,9 @@
             let Application = PIXI.Application,
                 loader = PIXI.loader,
                 resources = PIXI.loader.resources,
-                Sprite = PIXI.Sprite;
+                Sprite = PIXI.Sprite,
+                TextureCache = PIXI.utils.TextureCache,
+                Rectangle = PIXI.Rectangle;
 
             //Create a Pixi Application
             let app = new Application({
@@ -35,28 +37,90 @@
             app.renderer.autoResize = true;
             app.renderer.resize(window.innerWidth, window.innerHeight);
 
-            // 图片精灵
-            let texture = PIXI.utils.TextureCache["images/cat.png"];
-            let sprite = new PIXI.Sprite(texture);
+            // 
+            /* let base = new PIXI.BaseTexture(texture),
+                texture = new PIXI.Texture(base),
+                sprite = new PIXI.Sprite(texture); */
+
+            // 创建纹理
+            //let base = new PIXI.BaseTexture.fromCanvas(//);
 
 
             //Add the canvas that Pixi automatically created for you to the HTML document
+            // 监视加载进程,每次文件加载(此处为catImage文件)时调用loadProgressHandler
 
-            loader.add("src/assets/images/cat.png").load(setup);
+            loader
+                .add("catImage", "src/assets/images/cat.png", finishFunction)
+                .add("src/assets/images/tileset.png")
+                .on("progress", loadProgressHandler)
+                .load(setup);
+
+
+            function loadProgressHandler(loader, resource) {
+                // 可以显示加载的百分比,但实际上只有加载完才会打印一个100%.
+                // 应该是总的加载进度
+                console.log("loading: " + resource.url);
+                console.log("progress: " + loader.progress + "%");
+            };
+
+            function finishFunction() {
+                console.log("loader.add has been completed");
+
+            };
 
             function setup() {
-                // 创建精灵
+                // 创建图片精灵
+                let texture = PIXI.utils.TextureCache["src/assets/images/cat.png"];
+
+                // 精灵
                 let cat = new Sprite(
-                    resources["src/assets/images/cat.png"].texture)
+                    resources["catImage"].texture)
                 // 添加精灵
                 app.stage.addChild(cat);
                 // 移除精灵
                 //app.stage.removeChild(cat);
                 //cat.visible = false; // 或者隐藏它
+                console.log("All files loaded");
 
+                // 几种loader.add的语法
+                /* loader.reset().add({
+                    name: 'key1',
+                    url: 'https://www.baidu.com'
+                }, function() {});
+                
+                loader.add({
+                    name: 'key2',
+                    url: 'https://www.baidu.com',
+                    onComplete: function () {}
+                });
+                
+                loader.add({
+                    url: 'https://www.baidu.com',
+                    onComplete: function () {},
+                    crossOrigin: true
+                }) */
+                
+                // 精灵位置
+                cat.position.set(96, 96);
+                // 比例
+                cat.scale.set(1.5, 1.5);
+                // 旋转
+                cat.rotation = 0.1415926;
+                // 设置锚点
+                cat.anchor.set(0.5, 0.5);
+                // 设置原点
+                //cat.pivot.set(32, 32);
+                
+                // 雪碧图
+                let tileset = TextureCache["src/assets/images/tileset.png"];
+                let rectangle = new Rectangle(192, 128, 64, 64);
+                tileset.frame = rectangle;
+                let rocket = new Sprite(tileset);
+                rocket.x = 32;
+                rocket.y = 32;
+                app.stage.addChild(rocket);
+                renderer.render(stage);
             };
-            // 创建别名
-            let TextureCache = PIXI.utils.TextureCache;
         </script>
     </body>
 </html>
