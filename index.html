@@ -13,7 +13,8 @@
                 resources = PIXI.loader.resources,
                 Sprite = PIXI.Sprite,
                 TextureCache = PIXI.utils.TextureCache,
-                Rectangle = PIXI.Rectangle;
+                Rectangle = PIXI.Rectangle,
+                Container = PIXI.Container;
 
             //Create a Pixi Application
             let app = new Application({
@@ -24,7 +25,7 @@
                 resolution: 1
             });
 
-            let dungeon, explorer, treasure, door, id;
+            let dungeon, explorer, treasure, door, id, healthBar, message;
 
             document.body.appendChild(app.view);
 
@@ -128,38 +129,360 @@
                 // 开始创建地牢
                 id = PIXI.loader.resources["src/assets/images/treasureHunter.json"].textures;
 
-                treasure = new Sprite(id["treasure.png"]);
+                // create the scene
+                gameScene = new Container();
+                app.stage.addChild(gameScene);
+
+                gameOverScene = new Container();
+                app.stage.addChild(gameOverScene);
+
+                gameOverScene.visible = false;
+
+
+                // dungeon
                 dungeon = new Sprite(id["dungeon.png"]);
-                explorer = new Sprite(id["explorer.png"]);
+                gameScene.addChild(dungeon);
+
+                // door
                 door = new Sprite(id["door.png"]);
-
-                app.stage.addChild(dungeon);
-                app.stage.addChild(treasure);
-                app.stage.addChild(explorer);
-                app.stage.addChild(door);
-
-                explorer.position.set(68, app.stage.height / 2 - explorer.height / 2);
-                treasure.position.set(app.stage.width - treasure.width - 48, app.stage.height / 2 - treasure.height / 2);
                 door.position.set(door.width, 0);
+                gameScene.addChild(door);
+
+                // explorer 探索者
+                explorer = new Sprite(id["explorer.png"]);
+                explorer.x = 68;
+                explorer.y = app.stage.height / 2 - explorer.height / 2;
+                explorer.vx = 0;
+                explorer.vy = 0;
+                gameScene.addChild(explorer);
+
+                // treasure 宝箱
+                treasure = new Sprite(id["treasure.png"]);
+                treasure.x = app.stage.width - treasure.width - 48;
+                treasure.y = app.stage.height / 2 - treasure.height / 2;
+                gameScene.addChild(treasure);
 
                 // 添加怪物
                 let blobNum = 6,
                     spacing = 48,
-                    offset = explorer.x + spacing;
+                    offset = explorer.x + spacing,
+                    speed = 2,
+                    direction = 1;
+
+                blobList = [];
+
                 for (let i = 0; i < blobNum; i++) {
+
                     let blob = new Sprite(id["blob.png"]);
+
                     let x = spacing * i + offset;
                     let y = randomInt(offset, app.stage.height - blob.height);
                     blob.position.set(x, y);
-                    app.stage.addChild(blob);
+                    blob.vy = speed * direction;
+                    direction *= -1;
+                    blobList.push(blob);
+                    gameScene.addChild(blob);
                 };
 
+                // hp bar
+                healthBar = new Container();
+                healthBar.position.set(app.stage.width - 170, 4);
+                gameScene.addChild(healthBar);
+
+                // black background
+                let innerBar = new PIXI.Graphics();
+                innerBar.beginFill(0x000000);
+                innerBar.drawRect(0, 0, 128, 8);
+                innerBar.endFill();
+                healthBar.addChild(innerBar);
+
+                // red front
+                let outerBar = new PIXI.Graphics();
+                outerBar.beginFill(0xFF3300);
+                outerBar.drawRect(0, 0, 128, 8);
+                outerBar.endFill();
+                healthBar.addChild(outerBar);
+
+                healthBar.outer = outerBar;
+
+                let style = new PIXI.TextStyle({
+                    fontFamily: 'Futura',
+                    fontSize: 64,
+                    fill: 'white'
+                });
+
+                message = new PIXI.Text("Game Over, refresh and try again?", style);
+                message.x = 120;
+                message.y = app.stage.height / 2 - 32;
+                gameOverScene.addChild(message);
+
+                // 返回随机数, min ~ max
                 function randomInt(min, max) {
                     return Math.floor(Math.random() * (max - min + 1)) + min;
+                };
+
+                // 精灵移动 ticker相关
+                state = play;
+                app.ticker.add(delta => gameLoop(delta));
+
+                // 键盘
+                let left = keyboard(37),
+                    up = keyboard(38),
+                    right = keyboard(39),
+                    down = keyboard(40);
+
+                left.press = () => {
+                    explorer.vx = -5;
+                    explorer.vy = 0;
+                };
+
+                left.release = () => {
+                    if (!right.isDown && explorer.vy === 0) {
+                        explorer.vx = 0;
+                    }
+                };
+
+                up.press = () => {
+                    explorer.vy = -5;
+                    explorer.vx = 0;
+                };
+
+                up.release = () => {
+                    if (!down.isDown && explorer.vx === 0) {
+                        explorer.vy = 0;
+                    }
+                };
+
+                right.press = () => {
+                    explorer.vx = 5;
+                    explorer.vy = 0;
+                };
+
+                right.release = () => {
+                    if (!left.isDown && explorer.vy === 0) {
+                        explorer.vx = 0;
+                    }
+                };
+
+                down.press = () => {
+                    explorer.vy = 5;
+                    explorer.vx = 0;
+                };
+
+                down.release = () => {
+                    if (!up.isDown && explorer.vx === 0) {
+                        explorer.vy = 0;
+                    }
+                };
+
+                // 绘制多边形
+                // Graphics未找到
+                let rect = new PIXI.Graphics();
+                rect.beginFill(0xB35C37);
+                rect.lineStyle(4, 0xA0674B, 0.5);
+                rect.drawRect(0, 0, 64, 64);
+                rect.endFill();
+                rect.position.set(180, 180);
+                //app.stage.addChild(rect);
+
+
+
+            };
+
+            function gameLoop(delta) {
+                state(delta);
+            };
+
+            function play(delta) {
+                // explorer 移动
+                explorer.x += explorer.vx;
+                explorer.y += explorer.vy;
+
+                let explorerHit = false;
+                contain(explorer, {
+                    x: 28,
+                    y: 10,
+                    width: 488,
+                    height: 480
+                });
+                // blob移动
+                blobList.forEach(function(blob) {
+
+                    blob.y += blob.vy;
+
+                    let blobHitsWall = contain(blob, {
+                        x: 28,
+                        y: 10,
+                        width: 488,
+                        height: 480
+                    });
+
+                    if (blobHitsWall === 'top' || blobHitsWall === 'bottom') {
+                        blob.vy *= -1;
+                    }
+
+                    if (hitTestRectangle(explorer, blob)) {
+                        explorerHit = true;
+                    }
+                });
+
+                // 碰撞检测 - explorer blob
+                if (explorerHit) {
+                    explorer.alpha = 0.4;
+                    healthBar.outer.width -= 1;
+                } else {
+                    explorer.alpha = 1;
                 }
 
+                //碰撞检测 - explorer treasure
+                if (hitTestRectangle(explorer, treasure)) {
+                    treasure.x = explorer.x + 8;
+                    treasure.y = explorer.y + 8;
+                }
+
+                // 到达终点 - win
+                if (hitTestRectangle(treasure, door)) {
+                    state = end;
+                    message.text = 'You found the treasure! Congratulation!';
+                }
+
+                // hp归零, game over
+                if (healthBar.outer.width < 0) {
+                    state = end;
+                    message.text = 'Game Over!';
+                }
+            };
+
+            // game over end
+            function end() {
+                gameScene.visible = false;
+                gameOverScene.visible = true;
+            };
+
+            // 碰撞检测函数
+            function hitTestRectangle(r1, r2) {
+
+                //Define the variables we'll need to calculate
+                let hit, combinedHalfWidths, combinedHalfHeights, vx, vy;
+
+                //hit will determine whether there's a collision
+                hit = false;
+
+                //Find the center points of each sprite
+                r1.centerX = r1.x + r1.width / 2;
+                r1.centerY = r1.y + r1.height / 2;
+                r2.centerX = r2.x + r2.width / 2;
+                r2.centerY = r2.y + r2.height / 2;
+
+                //Find the half-widths and half-heights of each sprite
+                r1.halfWidth = r1.width / 2;
+                r1.halfHeight = r1.height / 2;
+                r2.halfWidth = r2.width / 2;
+                r2.halfHeight = r2.height / 2;
+
+                //Calculate the distance vector between the sprites
+                vx = r1.centerX - r2.centerX;
+                vy = r1.centerY - r2.centerY;
+
+                //Figure out the combined half-widths and half-heights
+                combinedHalfWidths = r1.halfWidth + r2.halfWidth;
+                combinedHalfHeights = r1.halfHeight + r2.halfHeight;
+
+                //Check for a collision on the x axis
+                if (Math.abs(vx) < combinedHalfWidths) {
+
+                    //A collision might be occuring. Check for a collision on the y axis
+                    if (Math.abs(vy) < combinedHalfHeights) {
+
+                        //There's definitely a collision happening
+                        hit = true;
+                    } else {
+
+                        //There's no collision on the y axis
+                        hit = false;
+                    }
+                } else {
+
+                    //There's no collision on the x axis
+                    hit = false;
+                }
+
+                //`hit` will be either `true` or `false`
+                return hit;
+            };
+
+            // stage边界
+            function contain(sprite, container) {
+                let collision = undefined;
+
+                // 左边界
+                if (sprite.x < container.x) {
+                    sprite.x = container.x;
+                    collision = 'left';
+                }
+
+                // 上边界
+                if (sprite.y < container.y) {
+                    sprite.y = container.y;
+                    collision = 'top';
+                }
+
+                // 右边界
+                if (sprite.x + sprite.width > container.width) {
+                    sprite.x = container.width - sprite.width;
+                    collision = 'right';
+                }
+
+                // 下边界
+                if (sprite.y + sprite.height > container.height) {
+                    sprite.y = container.height - sprite.height;
+                    collision = 'bottom';
+                }
+
+                return collision;
+            };
 
 
+            // 键盘监听
+            function keyboard(keyCode) {
+                let key = {};
+                key.code = keyCode;
+                key.isDown = false;
+                key.isUp = true;
+                key.press = undefined;
+                key.release = undefined;
+
+                key.downHandler = event => {
+                    if (event.keyCode === key.code) {
+                        if (key.isUp && key.press) {
+                            key.press();
+                        }
+                        key.isDown = true;
+                        key.isUp = false;
+                    }
+                    event.preventDefault();
+                };
+
+                key.upHandler = event => {
+                    if (event.keyCode === key.code) {
+                        if (key.isDown && key.release) {
+                            key.release();
+                        }
+                        key.isDown = false;
+                        key.isUp = true;
+                    }
+                    event.preventDefault();
+                };
+
+                window.addEventListener(
+                    "keydown", key.downHandler.bind(key), false
+                );
+
+                window.addEventListener(
+                    "keyup", key.upHandler.bind(key), false
+                );
+
+                return key;
             };
         </script>
     </body>
