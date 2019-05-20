@@ -34,30 +34,43 @@
                                 :before-close="handleClose">
                                 <el-row :gutter="20">
                                     <el-col :span="12">
-
-                                        <el-row :gutter="20">
-                                            <el-col :span="12">
-                                                <sprite-life-magic-bar></sprite-life-magic-bar>
-                                                <h3><i class="el-icon-user-solid">Name: {{ player.name }} </i></h3>
-                                                <h3><i class="el-icon-finished">LV: {{ player.lv }}</i></p>
-                                                <h3><i class="el-icon-sugar"></i>Hp: {{ player.hp }}</p>
-                                                <h3><i class="el-icon-ice-cream-round"></i>Attack: {{ player.atk }} </p>
-                                            </el-col>
-                                            <el-col :span="12">
-                                                <sprite-image :image-url="`assets/images/404.png`" :fitType="cover"></sprite-image>
-                                            </el-col>
-                                        </el-row>
-
-                                        <el-row :gutter="10">
-                                            <el-col :span="12">
-                                            </el-col>
-                                        </el-row>
+                                        <!-- player's view-->
+                                        <sprite-panel :image-url="`assets/images/404.png`" :fitType="cover" :name="player.name"
+                                            :lv="player.lv" :hp="player.hp" :attack="player.atk"></sprite-panel>
                                     </el-col>
                                     <el-col :span="12">
                                         <div class="grid-content">
                                             <!-- monster's' view -->
-                                            <sprite-life-magic-bar></sprite-life-magic-bar>
-                                            <sprite-image :image-url="`assets/images/4104.png`" :fitType="cover"></sprite-image>
+                                            <sprite-panel :image-url="`assets/images/404.png`" :fitType="cover" :name="monsterList[0].name"
+                                                :lv="monsterList[0].lv" :hp="monsterList[0].hp" :attack="monsterList[0].atk"></sprite-panel>
+                                        </div>
+                                    </el-col>
+                                </el-row>
+                                <el-row :gutter="10">
+                                    <el-col :span="12">
+                                        <div class="grid-content bg-purple">
+                                            <el-button style="width: 100%; height:100%" type="danger" @click="attack(player, monsterList, 'standAttack')"
+                                                :disabled="fightFlag || player.name ==='' ">スタンド攻撃!</el-button>
+                                        </div>
+                                    </el-col>
+                                    <el-col :span="12">
+                                        <div class="grid-content bg-purple">
+                                            <el-button style="width: 100%; height:100%" type="warning" @click="attack(player, monsterList, 'mudaAttack')"
+                                                :disabled="fightFlag || player.name ==='' ">無駄無駄無駄!</el-button>
+                                        </div>
+                                    </el-col>
+                                </el-row>
+                                <el-row :gutter="10">
+                                    <el-col :span="12">
+                                        <div class="grid-content bg-purple">
+                                            <el-button style="width: 100%; height:100%" type="primary" @click="attack(player, monsterList, 'timeAttack')"
+                                                :disabled="fightFlag || player.name ==='' ">時間を止めろ!</el-button>
+                                        </div>
+                                    </el-col>
+                                    <el-col :span="12">
+                                        <div class="grid-content bg-purple">
+                                            <el-button style="width: 100%; height:100%" type="info" @click="attack(player, monsterList, 'normalAttack')"
+                                                :disabled="fightFlag || player.name ==='' ">普通攻撃</el-button>
                                         </div>
                                     </el-col>
                                 </el-row>
@@ -287,6 +300,38 @@
                     </div>
                 </el-image>
             </div>`
+    });
+
+    // sprite 面板
+    Vue.component('sprite-panel', {
+        props: {
+            name: String,
+            lv: Number,
+            hp: Number,
+            atk: Number,
+            // picture
+            imageUrl: String,
+            fitType: String,
+        },
+        template: `<div>
+            <el-row :gutter="20">
+                <el-col :span="12">
+                    <sprite-life-magic-bar></sprite-life-magic-bar>
+                    <h3><i class="el-icon-user-solid">Name: {{ name }} </i></h3>
+                    <h3><i class="el-icon-finished">LV: {{ lv }}</i></h3>
+                    <h3><i class="el-icon-sugar">Hp: {{ hp }}</i></h3>
+                    <h3><i class="el-icon-ice-cream-round">Attack: {{ atk }}</i>
+                    </h3>
+                </el-col>
+                <el-col :span="12">
+                    <el-image style="width: 100%;" :src="imageUrl" :fit="fitType">
+                        <div slot="error" class="image-slot">
+                            <i class="el-icon-picture-outline"></i>
+                        </div>
+                    </el-image>
+                </el-col>
+            </el-row>
+        </div>`
     });
 
     Vue.component('battle-attack-button', {
